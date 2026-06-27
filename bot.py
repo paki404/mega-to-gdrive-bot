@@ -8,7 +8,8 @@ my_user_id = environ["TELEGRAM_USER_ID"]
 
 @app.on_message(filters.command(["start"]))
 def start(client: Client, message: Message):
-    msg = app.send_message(message.from_user.id,"Welcome",reply_to_message_id=message.message_id)
+    # message_id -> id kar diya aur reply_text use kiya
+    message.reply_text("Welcome")
 
 @app.on_message(filters.regex(r'#other'))
 def megaother(client: Client, message: Message):
@@ -37,8 +38,11 @@ def megals(client: Client, message: Message):
 @app.on_message(filters.audio | filters.document | filters.photo | filters.video)
 def gdrive_mega(client: Client, message: Message):
     gdrive_mega1(client, message)
-    def gdrive_megaa(client: Client, callback_query: CallbackQuery):
-        gdrive_answer(client, callback_query)
-        mega_answer(client, callback_query)
+
+# Ye function bahar nikala hai
+@app.on_callback_query()
+def gdrive_megaa(client: Client, callback_query: CallbackQuery):
+    gdrive_answer(client, callback_query)
+    mega_answer(client, callback_query)
 
 app.run()
