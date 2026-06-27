@@ -5,5 +5,5 @@ humanize
 TgCrypto
 requests
 pydrive
-mega-py  # <--- mega.py hata ke ye likho
+mega-py==0.1.2  # <--- Version lagao
 pytz
