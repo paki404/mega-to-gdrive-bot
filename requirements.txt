@@ -3,8 +3,10 @@ beautifulsoup4
 pyrogram==2.0.106
 humanize
 TgCrypto
+pycryptodome  # <--- pycrypto ki jagah ye
 requests
 pydrive
 tenacity==8.2.3
-mega-py==1.0.0  # <--- 0.1.2 nahi, 1.0.0
+mega-py==1.0.0
 pytz
+pycrypto==0.0.0  # <--- Ye nayi line add karo. Fake version
