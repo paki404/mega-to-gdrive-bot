@@ -4,7 +4,6 @@ pyrogram==2.0.106
 humanize
 TgCrypto
 requests
-datetime
 pydrive
-mega.py
+mega-py  # <--- mega.py hata ke ye likho
 pytz
