@@ -1,6 +1,6 @@
 httplib2==0.15.0
 beautifulsoup4
-pyrogram
+pyrogram==2.0.106
 humanize
 TgCrypto
 requests
