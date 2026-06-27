@@ -1,28 +1,47 @@
+# plugins/rm.py
+from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram import Client
-from datetime import datetime
-from userbot import app
-import subprocess
-import traceback
-import pytz
-import os
+from mega import Mega
+import sqlite3
 
-def mega_rm_file(client, message):
-    coming_user_id = message.from_user.id
-    reply_message_id = message.message_id
+DB_NAME = "users.db"
 
-    msg = app.send_message(coming_user_id, reply_to_message_id=reply_message_id, text="Working on it.",parse_mode="html")
+def get_mega(user_id: int):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("SELECT mega_email, mega_pass FROM users WHERE user_id =?", (user_id,))
+        res = c.fetchone()
+        conn.close()
+        return res
+    except:
+        return None
+
+def mega_rm(client: Client, message: Message): # <-- NAAM TEAK KAR DIYA
+    """/rm filename.ext -> User ke apne Mega se file delete"""
+    user_creds = get_mega(message.from_user.id)
+    if not user_creds:
+        return message.reply_text("❌ Pehle `/login email password` se Mega account add karo.")
+
+    MEGA_EMAIL, MEGA_PASS = user_creds
+
+    if len(message.command) < 2:
+        return message.reply_text("**Usage:** `/rm filename.ext`")
+
+    file_name = " ".join(message.command[1:])
+    msg = message.reply_text(f"`Searching {file_name} in your Mega...`")
 
     try:
-        mega_rmmm = message.text
-        mega_rmm = mega_rmmm.replace("#rm ","")
-        mega_rm = '"{}"'.format(mega_rmm)
-        rm_file = subprocess.check_output('mega-rm -f ' + mega_rm,shell=True)
-        rm_msg = app.send_message(coming_user_id, reply_to_message_id=reply_message_id, text="file removed.",parse_mode="html")
-        msg.delete()
+        mega = Mega()
+        m = mega.login(MEGA_EMAIL, MEGA_PASS)
 
-    except:
-        error_var = traceback.format_exc()
-        msg.delete()
-        app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text="Got error.",parse_mode="html")
-        app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text=error_var,parse_mode="html")
+        files = m.find(file_name)
+        if not files:
+            return msg.edit_text(f"❌ `{file_name}` not found in your Mega.")
+
+        file_id = list(files.keys())[0]
+        m.delete(file_id)
+        msg.edit_text(f"✅ `File removed from your Mega:` `{file_name}`")
+
+    except Exception as e:
+        msg.edit_text(f"**Mega Error:** `{e}`")
