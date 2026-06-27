@@ -1,29 +1,65 @@
+# plugins/login.py
+from pyrogram import Client, filters
 from pyrogram.types import Message
-from pyrogram import Client
-from datetime import datetime
-from userbot import app
-from os import environ
-import subprocess
-import traceback
-import pytz
+import sqlite3
 import os
 
-def mega_login(client: Client, message: Message):
-    coming_user_id = message.from_user.id
-    reply_message_id = message.message_id
+DB_NAME = "users.db"
 
+def init_db():
+    """Pehli baar bot chale to table bana dega"""
+    if not os.path.exists(DB_NAME):
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (user_id INTEGER PRIMARY KEY,
+                      mega_email TEXT,
+                      mega_pass TEXT)''')
+        conn.commit()
+        conn.close()
+
+def save_mega(user_id: int, email: str, password: str):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("REPLACE INTO users (user_id, mega_email, mega_pass) VALUES (?,?,?)",
+              (user_id, email, password))
+    conn.commit()
+    conn.close()
+
+def get_mega(user_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT mega_email, mega_pass FROM users WHERE user_id =?", (user_id,))
+    res = c.fetchone()
+    conn.close()
+    return res # (email, pass) ya None
+
+init_db()
+
+def mega_login(client: Client, message: Message):
+    """/login email password"""
     try:
-        login_msg = app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text="Trying to login.",parse_mode="html")
-        login_msg_id = login_msg.message_id
-        meganz_email = environ["MEGA.NZ_EMAIL"]
-        meganz_password = environ["MEGA.NZ_PASSWORD"]
-        login_msg_edit = app.edit_message_text(chat_id=coming_user_id, message_id=login_msg_id, text="Logged.",parse_mode="html")
-        mega_login = subprocess.check_output('mega-login' + " " + meganz_email + " " +meganz_password,shell=True)
-    except:
-        error_var = traceback.format_exc()
-        login_msg_edit.delete()
-        if not 'exit status 54' in error_var:
-            app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text="Got error.",parse_mode="html")
-            app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text=error_var,parse_mode="html")
-        else:
-            app.send_message(chat_id=coming_user_id, reply_to_message_id=reply_message_id, text="Already logged in.",parse_mode="html")
+        parts = message.text.split(" ", 2)
+        if len(parts)!= 3:
+            return message.reply_text("**Usage:** `/login your_email your_password`\n\nExample: `/login abc@gmail.com mypass123`")
+
+        email, password = parts[1], parts[2]
+        user_id = message.from_user.id
+
+        msg = message.reply_text("`Checking your Mega login...`")
+
+        # Check kar lo ke login sahi hai ya nahi
+        from mega import Mega
+        try:
+            mega = Mega()
+            m = mega.login(email, password)
+            m.get_user() # agar ye chal gaya to login sahi hai
+        except Exception as e:
+            msg.edit_text(f"❌ Login Failed: `Invalid Email or Password`\nError: `{e}`")
+            return
+
+        save_mega(user_id, email, password)
+        msg.edit_text(f"✅ Mega login saved successfully\n**Email:** `{email}`\n\nAb mujhe file bhejo upload karne ke liye.")
+
+    except Exception as e:
+        message.reply_text(f"**Error:** `{e}`")
